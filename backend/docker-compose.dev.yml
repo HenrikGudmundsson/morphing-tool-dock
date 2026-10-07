@@ -1,0 +1,17 @@
+# Postgres only. FastAPI itself runs natively via `uv run uvicorn --reload`
+# for fast local iteration -- see README.md's "Local dev" section --
+# deliberately not containerized here the way pg's dev compose does it.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent
+      POSTGRES_DB: agent_backend
+    ports:
+      - "5432:5432"
+    volumes:
+      - agent_postgres_dev_data:/var/lib/postgresql/data
+
+volumes:
+  agent_postgres_dev_data:
