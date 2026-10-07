@@ -1,11 +1,29 @@
 # agent-backend
 
-Real `pydantic-ai` agent backend for `apps/ssr-agent`. Internal-only
-service: reachable from the `ssr-agent` container over the Docker Compose
-network, never from a browser directly.
+The agent behind the demos: a FastAPI service around a
+[pydantic-ai](https://ai.pydantic.dev/) agent that decides which widget
+answers a message.
 
-See `the project's design notes` (or the repo's own copy
-if it's been committed) for the full design.
+`POST /resolve` takes:
+
+```json
+{ "query": "what's on my calendar next week", "session_id": "…", "tools": ["showWeather", "showCalendar"] }
+```
+
+and returns either a tool call or a plain text reply:
+
+```json
+{ "tool": "showCalendar", "args": { "week_offset": 1 }, "reply": null }
+```
+
+- **Capabilities.** Each widget a client can show is declared to the model
+  as a tool with a typed argument schema, in `agent_backend/capabilities/`.
+  The model never produces UI; it names a capability and fills in its
+  arguments, and the client renders the matching widget.
+- **`tools`** lists the capabilities the calling client has widgets for.
+  Only those are offered to the model. Omit it to offer all of them.
+- **History.** The conversation is stored per `session_id` in Postgres and
+  sent along with each new message.
 
 ## Local dev
 
@@ -15,13 +33,8 @@ if it's been committed) for the full design.
 4. `uv run alembic upgrade head`
 5. `uv run uvicorn agent_backend.main:app --reload --port 8000`
 
-Then, in `apps/ssr-agent`, add a `.env.local` with:
-```
-AGENT_BACKEND_URL=http://localhost:8000
-```
+## Adding a capability
 
-## Tests
-
-```
-uv run pytest
-```
+Add a module in `agent_backend/capabilities/` with an argument model, a
+tool function that records its decision on `ctx.deps.resolved`, and a
+`CAPABILITY`; then list it in `capabilities/registry.py`.
