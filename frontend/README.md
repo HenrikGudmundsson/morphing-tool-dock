@@ -1,12 +1,18 @@
-# @portfolio/agent-tools
+# Frontend
 
-Minimal agent-driven UI demo: Vite + React + TypeScript + Tailwind v4, no
-SSR, no framework beyond React. Calls `apps/agent-backend`'s `/resolve`
-directly from the browser and renders the matching widget client-side.
+Vite + React + TypeScript + Tailwind v4, no framework beyond React. Asks
+the agent backend's `/resolve` which widget answers a typed message and
+renders it client-side; a click on a tray icon opens its widget without
+asking.
 
-Local dev: run `apps/agent-backend` per its own README, then `pnpm dev`
-from the repo root as usual. Vite's dev server proxies `/agent-tools-api`
-to `http://localhost:8000` (see `vite.config.ts`), same relative path this
-app's code uses in branch deploys -- no env var needed.
+Local dev: start the backend per its own README, then `pnpm install` and
+`pnpm dev` here. Vite's dev server proxies `/agent-tools-api` to
+`http://localhost:8000` (see `vite.config.ts`), so no environment
+variables are needed.
 
-See the repo root `the workspace notes` for the overall structure and commands.
+Where to look:
+
+- `src/widget-morph.tsx` -- the icon-to-widget animation.
+- `src/App.tsx` -- open widgets, pinning, and the sliding layout.
+- `src/agent-console.tsx` -- the input and the tool tray.
+- `src/widgets/` -- the widgets themselves (weather, calendar, to-do).
