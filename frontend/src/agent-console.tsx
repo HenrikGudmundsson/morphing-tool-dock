@@ -182,7 +182,6 @@ export function AgentConsole({
               type="button"
               aria-label={t.label}
               data-tool={t.tool}
-              data-active={pendingClickTool === t.tool ? "" : undefined}
               data-current={hiddenTools.includes(t.tool) ? "" : undefined}
               disabled={isBusy}
               onClick={(e) => {
@@ -192,9 +191,9 @@ export function AgentConsole({
               }}
               style={{
                 translate: `${offset}px 0`,
-                transition: `translate 300ms ease ${isHidden ? "200ms" : "300ms"}, scale 200ms, opacity 200ms`,
+                transition: `translate 300ms ease ${isHidden ? "200ms" : "300ms"}, opacity 200ms`,
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-lg opacity-100 cursor-pointer disabled:cursor-default data-[active]:scale-110 data-[active]:border-neutral-900 data-[current]:opacity-0 dark:border-neutral-700 dark:data-[active]:border-neutral-100"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-lg opacity-100 cursor-pointer disabled:cursor-default data-[current]:opacity-0 dark:border-neutral-700"
             >
               <t.icon
                 aria-hidden
