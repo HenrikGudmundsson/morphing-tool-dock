@@ -12,6 +12,9 @@ export type ResolveResponse = {
   tool: string | null
   args: Record<string, unknown> | null
   reply: string | null
+  // Names the usage limit that refused the question, when one did;
+  // `reply` then holds the explanation.
+  limited?: string | null
 }
 
 // Typed tool-call shape, mirrored from apps/ssr-agent/app/agent.ts -- kept
