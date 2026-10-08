@@ -561,12 +561,16 @@ export function WidgetMorph({
     const boxEl = boxRef.current;
     const contentEl = contentRef.current;
     const badgeEl = badgeRef.current;
+    // Where the icon is *now*. The position recorded at click time is
+    // only a fallback: when this widget replaces another, the flight
+    // starts after the old one has shrunk away, and by then the tray may
+    // have moved (the column scrolls as its content changes height).
+    const clickRect = takePendingIconRect();
     const iconRect =
-      takePendingIconRect() ??
       document
         .querySelector(`[data-tool="${displayed.tool}"]`)
         ?.getBoundingClientRect() ??
-      null;
+      clickRect;
     // These early-return paths update the ref immediately: content still
     // updates via the normal React render regardless, no animation is
     // ever going to happen here, so there's no Strict-Mode-cancellation
