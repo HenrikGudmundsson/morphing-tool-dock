@@ -10,6 +10,7 @@ import {
   addDisplayedTool,
   removeDisplayedTool,
   takePendingIconRect,
+  wasJustClicked,
 } from "./morph-state";
 import { TOOLS } from "./tools";
 
@@ -224,7 +225,9 @@ function flipWidget(
   // true for the icon-to-widget entrance, false for the widget-to-icon
   // exit -- controls which end of the trip gets the hold.
   growing: boolean,
-  onDone: () => void
+  onDone: () => void,
+  // Whether this trip out of the tray was started by a click on the icon.
+  clicked = false
 ): () => void {
   // Reserve the larger of the two heights on the wrapper so the page
   // doesn't reflow while the box is temporarily taken out of flow below.
@@ -353,7 +356,24 @@ function flipWidget(
       { ...to, offset: POP_MS / total, easing: "ease-out" },
       { ...from, offset: 1 },
     ];
+    // A click is acknowledged at once: the icon starts out tinted, as it
+    // was while pressed, and the tint drains away as the pop takes over.
+    // The agent opening a widget has no click to acknowledge.
+    if (clicked) {
+      const tint = `color-mix(in srgb, ${getComputedStyle(boxEl).color} 5%, ${getComputedStyle(boxEl).backgroundColor})`;
+      popAnimations.push(
+        boxEl.animate(
+          [
+            { backgroundColor: tint, offset: 0 },
+            { backgroundColor: tint, offset: 0.35, easing: "ease-out" },
+            { offset: 1 },
+          ],
+          { duration: POP_MS }
+        )
+      );
+    }
     popAnimations = [
+      ...popAnimations,
       boxEl.animate(frames(rest, popped), { duration: total }),
       badgeEl.animate(frames(badgeRest, badgePopped), { duration: total }),
     ];
@@ -602,7 +622,8 @@ export function WidgetMorph({
         // it re-checks the guard above, correctly treats itself as a real
         // entrance, and this fires for real once IT completes instead.
         previousDisplayedToolRef.current = displayed.tool;
-      }
+      },
+      wasJustClicked(displayed.tool)
     );
     activeFlipCancelRef.current = thisCancel;
     const cancelFlip = thisCancel;

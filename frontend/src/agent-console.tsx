@@ -3,6 +3,7 @@ import type { ResolveFn, ResolveResponse, ToolCall } from "./resolve";
 import { TOOLS } from "./tools";
 import {
   getDisplayedTools,
+  markClicked,
   setPendingIconRect,
   subscribeDisplayedTool,
 } from "./morph-state";
@@ -186,6 +187,7 @@ export function AgentConsole({
               disabled={isBusy}
               onClick={(e) => {
                 setPendingIconRect(e.currentTarget.getBoundingClientRect());
+                markClicked(t.tool);
                 setValue("");
                 submitClick(t.tool, t.example, t.exampleArgs);
               }}
@@ -193,7 +195,7 @@ export function AgentConsole({
                 translate: `${offset}px 0`,
                 transition: `translate 300ms ease ${isHidden ? "200ms" : "300ms"}, opacity 200ms`,
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-lg opacity-100 cursor-pointer disabled:cursor-default data-[current]:opacity-0 dark:border-neutral-700"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-lg opacity-100 cursor-pointer active:bg-neutral-100 disabled:cursor-default dark:active:bg-neutral-800 data-[current]:opacity-0 dark:border-neutral-700"
             >
               <t.icon
                 aria-hidden

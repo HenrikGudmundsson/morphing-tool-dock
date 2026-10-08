@@ -15,6 +15,23 @@ export function setPendingIconRect(rect: DOMRect) {
   pendingIconRect = rect;
 }
 
+// Whether a tool's tray icon was clicked a moment ago, as opposed to the
+// tool being opened by the agent. A timestamp rather than a flag that is
+// cleared on read: the effect that asks runs twice under Strict Mode.
+let lastClick: { tool: ToolCall["tool"]; at: number } | null = null;
+
+export function markClicked(tool: ToolCall["tool"]) {
+  lastClick = { tool, at: performance.now() };
+}
+
+export function wasJustClicked(tool: ToolCall["tool"]): boolean {
+  return (
+    lastClick !== null &&
+    lastClick.tool === tool &&
+    performance.now() - lastClick.at < 500
+  );
+}
+
 export function takePendingIconRect(): DOMRect | null {
   const rect = pendingIconRect;
   pendingIconRect = null;
