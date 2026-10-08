@@ -54,3 +54,18 @@ class UsageEvent(Base):
     ip: Mapped[str] = mapped_column(nullable=False)
     input_tokens: Mapped[int] = mapped_column(nullable=False, server_default="0")
     output_tokens: Mapped[int] = mapped_column(nullable=False, server_default="0")
+
+
+class VerifiedSession(Base):
+    """A session that has passed the human check, and when.
+
+    See verification.py. One row per session; passing again moves
+    `verified_at` forward.
+    """
+
+    __tablename__ = "verified_sessions"
+
+    session_id: Mapped[str] = mapped_column(primary_key=True)
+    verified_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")
+    )

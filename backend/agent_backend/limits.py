@@ -28,6 +28,7 @@ MESSAGES = {
     "session": "This conversation has reached the demo's limit for today.",
     "daily": "The demo has reached today's usage limit. Please come back tomorrow.",
     "unavailable": "The demo is temporarily unavailable. Please try again later.",
+    "verification": "One moment: checking that you're not a robot.",
 }
 
 

@@ -10,8 +10,18 @@ from agent_backend import config
 from agent_backend.agent.core import build_agent
 from agent_backend.agent.deps import AgentDeps
 from agent_backend.agent.history import last_turns
-from agent_backend.api.models import ResolveRequest, ResolveResponse
-from agent_backend.dependencies import get_conversation_repository, get_usage_limiter
+from agent_backend import verification
+from agent_backend.api.models import (
+    ResolveRequest,
+    ResolveResponse,
+    VerifyRequest,
+    VerifyResponse,
+)
+from agent_backend.dependencies import (
+    get_conversation_repository,
+    get_session_verifier,
+    get_usage_limiter,
+)
 from agent_backend.limits import MESSAGES
 
 router = APIRouter()
@@ -37,9 +47,23 @@ async def resolve(
     http_request: Request,
     repo=Depends(get_conversation_repository),
     limiter=Depends(get_usage_limiter),
+    verifier=Depends(get_session_verifier),
 ):
     if len(request.query) > config.MAX_QUERY_CHARS:
         return refused("length")
+
+    # Before anything is counted or spent: has this session shown there is
+    # a person behind it? Like the limits below, an error here refuses.
+    if verification.required():
+        try:
+            verified = await verifier.is_verified(request.session_id)
+        except Exception:
+            logger.exception("verification lookup failed")
+            return refused("unavailable")
+        if not verified:
+            response = refused("verification")
+            response.site_key = config.TURNSTILE_SITE_KEY
+            return response
 
     # If the limits can't be checked, nothing is let through: an outage
     # must not turn into an unmetered service.
@@ -99,3 +123,19 @@ async def resolve(
         return ResolveResponse(tool=deps.resolved["tool"], args=deps.resolved["args"])
 
     return ResolveResponse(reply=result.output)
+
+
+@router.post("/verify")
+async def verify(
+    request: VerifyRequest,
+    http_request: Request,
+    verifier=Depends(get_session_verifier),
+) -> VerifyResponse:
+    """Marks a session as verified, given a valid Turnstile token."""
+    if not verification.required():
+        return VerifyResponse(verified=True)
+    return VerifyResponse(
+        verified=await verifier.verify(
+            request.session_id, request.token, caller_ip(http_request)
+        )
+    )

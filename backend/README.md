@@ -53,6 +53,13 @@ whose `limited` field names the limit; the model is not called. If the
 limits cannot be checked (the database is down), questions are refused
 rather than let through.
 
+**Human check (optional).** With `TURNSTILE_SITE_KEY` and
+`TURNSTILE_SECRET_KEY` set, a session's questions are only answered after
+its client has passed Cloudflare Turnstile once: `/resolve` replies with
+`limited: "verification"` and the site key, the client runs the widget and
+posts the token to `/verify`, then asks again. See
+`agent_backend/verification.py`.
+
 The caller's address is read from the `X-Real-IP` header, so this service
 must only be reachable through a proxy that sets it.
 

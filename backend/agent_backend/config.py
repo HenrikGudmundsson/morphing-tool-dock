@@ -31,3 +31,12 @@ LIMIT_PER_SESSION_PER_DAY = _int("LIMIT_PER_SESSION_PER_DAY", 30)
 # Tokens (input + output) across all callers per UTC day. A question costs
 # roughly 1,000-2,000, so this is a few hundred questions.
 DAILY_TOKEN_BUDGET = _int("DAILY_TOKEN_BUDGET", 500_000)
+
+# --- Human verification (Cloudflare Turnstile) ----------------------------
+# Optional. When both keys are set, a session has to pass a Turnstile check
+# once before its questions are answered; see verification.py. Unset (local
+# development, branch deploys) nothing is asked for.
+TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY") or None
+TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY") or None
+# How long a passed check keeps a session verified.
+VERIFICATION_HOURS = _int("VERIFICATION_HOURS", 24)
