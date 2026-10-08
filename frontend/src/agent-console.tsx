@@ -137,6 +137,8 @@ export function AgentConsole({
         <input
           type="text"
           aria-label="Message"
+          // The agent backend refuses anything longer.
+          maxLength={400}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Try: weather in Oslo / add buy milk to my to-do list"
