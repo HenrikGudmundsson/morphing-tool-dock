@@ -170,7 +170,9 @@ export function AgentConsole({
           const isHidden = hiddenTools.includes(t.tool);
           // Moved with `translate` instead of reordering the DOM, so the
           // move can animate. A hidden icon waits out its own fade first,
-          // so it is never seen sliding away.
+          // so it is never seen sliding away; the others wait for
+          // the departing icon's pop (POP_MS in widget-morph.tsx) to finish,
+          // so they don't slide in underneath it.
           const offset = (packed.indexOf(t.tool) - domIndex) * TRAY_STEP;
           const isBusy =
             pendingClickTool === t.tool || hiddenTools.includes(t.tool);
@@ -190,7 +192,7 @@ export function AgentConsole({
               }}
               style={{
                 translate: `${offset}px 0`,
-                transition: `translate 300ms ease ${isHidden ? "200ms" : "0ms"}, scale 200ms, opacity 200ms`,
+                transition: `translate 300ms ease ${isHidden ? "200ms" : "240ms"}, scale 200ms, opacity 200ms`,
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-lg opacity-100 cursor-pointer disabled:cursor-default data-[active]:scale-110 data-[active]:border-neutral-900 data-[current]:opacity-0 dark:border-neutral-700 dark:data-[active]:border-neutral-100"
             >

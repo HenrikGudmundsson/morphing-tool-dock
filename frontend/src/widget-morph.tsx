@@ -55,6 +55,15 @@ const HOLD_FRACTION = 0.8;
 const CONTENT_FADE_DELAY = HOLD_FRACTION * DURATION;
 const CONTENT_FADE_DURATION = 250;
 
+// Before it leaves the tray, the icon "pops": it swells a little and its
+// border thickens and darkens, so the eye is on the right icon when it
+// takes off. POP_IN_MS to swell, held until POP_MS, when the flight
+// starts; it settles back to normal over the flight's first POP_OUT_MS.
+const POP_IN_MS = 110;
+const POP_MS = 240;
+const POP_OUT_MS = 160;
+const POP_SCALE = 1.16;
+
 // The corner badge's resting geometry, matching its Tailwind classes
 // below (`right-20 top-4 h-12 w-12 text-xl`) -- kept as named constants
 // because the animation drives these same properties via inline styles,
@@ -235,6 +244,31 @@ function flipWidget(
   // computed above (from .left/.top, not center-to-center).
   boxEl.style.setProperty("offset-anchor", "0% 0%");
 
+  // Only the trip out of the tray starts with a pop; the flight itself
+  // waits for it, holding its first frame (the icon) meanwhile.
+  const delay = growing ? POP_MS : 0;
+  // `transform`, not the `scale` property: `scale` is applied outside the
+  // offset-path translation and would stretch the flight's own offset
+  // along with the box, throwing it off the icon; `transform` is applied
+  // inside it and only swells the box around its centre.
+  const popped = {
+    transform: `scale(${POP_SCALE})`,
+    borderWidth: "1.5px",
+    borderColor: getComputedStyle(boxEl).color,
+  };
+  const popTotal = POP_MS + POP_OUT_MS;
+  const popAnimation = growing
+    ? boxEl.animate(
+        [
+          { transform: "scale(1)", offset: 0, easing: "cubic-bezier(.2,1.4,.4,1)" },
+          { ...popped, offset: POP_IN_MS / popTotal },
+          { ...popped, offset: POP_MS / popTotal, easing: "ease-out" },
+          { transform: "scale(1)", offset: 1 },
+        ],
+        { duration: popTotal }
+      )
+    : null;
+
   const shapeAnimation = boxEl.animate(
     holdThenSnapKeyframes(
       {
@@ -249,12 +283,12 @@ function flipWidget(
       },
       growing
     ),
-    { duration: DURATION, easing: "linear", fill: "forwards" }
+    { duration: DURATION, delay, easing: "linear", fill: "both" }
   );
 
   const positionAnimation = boxEl.animate(
     [{ offsetDistance: "0%" }, { offsetDistance: "100%" }],
-    { duration: DURATION, easing: EASING, fill: "forwards" }
+    { duration: DURATION, delay, easing: EASING, fill: "both" }
   );
 
   const badgeAnimation = badgeEl.animate(
@@ -275,7 +309,7 @@ function flipWidget(
       },
       growing
     ),
-    { duration: DURATION, easing: "linear", fill: "forwards" }
+    { duration: DURATION, delay, easing: "linear", fill: "both" }
   );
 
   // The rects above are a snapshot, but the layout can move mid-flight:
@@ -297,6 +331,7 @@ function flipWidget(
     if (settled) return;
     settled = true;
     cancelAnimationFrame(followFrame);
+    popAnimation?.cancel();
     shapeAnimation.cancel();
     positionAnimation.cancel();
     badgeAnimation.cancel();
@@ -537,7 +572,7 @@ export function WidgetMorph({
     contentFadeCancelRef.current = cancelContentFade;
     rafId1 = requestAnimationFrame(() => {
       rafId2 = requestAnimationFrame(() => {
-        contentEl.style.transition = `opacity ${CONTENT_FADE_DURATION}ms ease-out ${CONTENT_FADE_DELAY}ms`;
+        contentEl.style.transition = `opacity ${CONTENT_FADE_DURATION}ms ease-out ${POP_MS + CONTENT_FADE_DELAY}ms`;
         contentEl.style.opacity = "1";
         if (contentFadeCancelRef.current === cancelContentFade) {
           contentFadeCancelRef.current = null;
