@@ -57,8 +57,8 @@ const CONTENT_FADE_DURATION = 250;
 
 // Before it leaves the tray, the icon "pops": it swells a little and its
 // border thickens and darkens, so the eye is on the right icon when it
-// takes off. POP_IN_MS to swell (an animation the eye can follow, with a
-// slight overshoot), held until POP_MS, when the flight
+// takes off. POP_IN_MS to swell (an animation the eye can follow, on an
+// easeInOutBack curve), held until POP_MS, when the flight
 // starts; it settles back to normal over the flight's first POP_OUT_MS.
 const POP_IN_MS = 220;
 const POP_MS = 300;
@@ -342,7 +342,8 @@ function flipWidget(
     };
     const total = POP_MS + POP_OUT_MS;
     const frames = <T extends Record<string, string>>(from: T, to: T) => [
-      { ...from, offset: 0, easing: "cubic-bezier(.3,1.3,.5,1)" },
+      // easeInOutBack: a small dip first, then past the target and back.
+      { ...from, offset: 0, easing: "cubic-bezier(0.68, -0.6, 0.32, 1.6)" },
       { ...to, offset: POP_IN_MS / total },
       { ...to, offset: POP_MS / total, easing: "ease-out" },
       { ...from, offset: 1 },
