@@ -57,10 +57,11 @@ const CONTENT_FADE_DURATION = 250;
 
 // Before it leaves the tray, the icon "pops": it swells a little and its
 // border thickens and darkens, so the eye is on the right icon when it
-// takes off. POP_IN_MS to swell, held until POP_MS, when the flight
+// takes off. POP_IN_MS to swell (an animation the eye can follow, with a
+// slight overshoot), held until POP_MS, when the flight
 // starts; it settles back to normal over the flight's first POP_OUT_MS.
-const POP_IN_MS = 110;
-const POP_MS = 240;
+const POP_IN_MS = 220;
+const POP_MS = 300;
 const POP_OUT_MS = 160;
 const POP_SCALE = 1.16;
 
@@ -82,10 +83,16 @@ type BadgeGeom = { top: number; right: number; size: number; fontSize: number };
 // The badge's geometry when it's occupying a tray icon's spot: filling
 // the box completely (no inset), sized to match, at the tray button's
 // own font size -- i.e. indistinguishable from the plain tray icon.
+// The tray icon's own border, and the box's while it is icon-sized.
+const ICON_BORDER = 1;
+
 function iconBadgeGeom(iconRect: DOMRect): BadgeGeom {
   return {
-    top: 0,
-    right: 0,
+    // The glyph is positioned inside the box's border, but has to be
+    // centred on the whole icon-sized box: pull it back out by the border
+    // on both sides, or it sits a pixel off the tray icon's own glyph.
+    top: -ICON_BORDER,
+    right: -ICON_BORDER,
     size: iconRect.height,
     fontSize: ICON_FONT_SIZE,
   };
@@ -247,27 +254,6 @@ function flipWidget(
   // Only the trip out of the tray starts with a pop; the flight itself
   // waits for it, holding its first frame (the icon) meanwhile.
   const delay = growing ? POP_MS : 0;
-  // `transform`, not the `scale` property: `scale` is applied outside the
-  // offset-path translation and would stretch the flight's own offset
-  // along with the box, throwing it off the icon; `transform` is applied
-  // inside it and only swells the box around its centre.
-  const popped = {
-    transform: `scale(${POP_SCALE})`,
-    borderWidth: "1.5px",
-    borderColor: getComputedStyle(boxEl).color,
-  };
-  const popTotal = POP_MS + POP_OUT_MS;
-  const popAnimation = growing
-    ? boxEl.animate(
-        [
-          { transform: "scale(1)", offset: 0, easing: "cubic-bezier(.2,1.4,.4,1)" },
-          { ...popped, offset: POP_IN_MS / popTotal },
-          { ...popped, offset: POP_MS / popTotal, easing: "ease-out" },
-          { transform: "scale(1)", offset: 1 },
-        ],
-        { duration: popTotal }
-      )
-    : null;
 
   const shapeAnimation = boxEl.animate(
     holdThenSnapKeyframes(
@@ -312,6 +298,60 @@ function flipWidget(
     { duration: DURATION, delay, easing: "linear", fill: "both" }
   );
 
+  // The pop, created after the animations above so that it overrides the
+  // size they are holding for as long as it runs. It is done with real
+  // geometry -- a larger box, pulled back by half the difference with
+  // negative margins so it grows around its centre -- rather than a
+  // scale transform, whose origin browsers resolve differently once an
+  // offset-path is involved.
+  let popAnimations: Animation[] = [];
+  if (growing) {
+    const growX = (fromRect.width * (POP_SCALE - 1)) / 2;
+    const growY = (fromRect.height * (POP_SCALE - 1)) / 2;
+    const rest = {
+      width: `${fromRect.width}px`,
+      height: `${fromRect.height}px`,
+      marginLeft: "0px",
+      marginTop: "0px",
+      borderRadius: `${fromRadius}px`,
+      boxShadow: "0 0 0 0 transparent",
+    };
+    // The bolder border is the 1px border darkened plus a 1px ring drawn
+    // as a shadow, not a wider border: a border that changes width moves
+    // everything inside the box, glyph included.
+    const ink = getComputedStyle(boxEl).color;
+    const popped = {
+      width: `${fromRect.width * POP_SCALE}px`,
+      height: `${fromRect.height * POP_SCALE}px`,
+      marginLeft: `${-growX}px`,
+      marginTop: `${-growY}px`,
+      borderRadius: `${fromRadius * POP_SCALE}px`,
+      borderColor: ink,
+      boxShadow: `0 0 0 1px ${ink}`,
+    };
+    const badgeRest = {
+      width: `${fromBadge.size}px`,
+      height: `${fromBadge.size}px`,
+      fontSize: `${fromBadge.fontSize}px`,
+    };
+    const badgePopped = {
+      width: `${fromBadge.size * POP_SCALE}px`,
+      height: `${fromBadge.size * POP_SCALE}px`,
+      fontSize: `${fromBadge.fontSize * POP_SCALE}px`,
+    };
+    const total = POP_MS + POP_OUT_MS;
+    const frames = <T extends Record<string, string>>(from: T, to: T) => [
+      { ...from, offset: 0, easing: "cubic-bezier(.3,1.3,.5,1)" },
+      { ...to, offset: POP_IN_MS / total },
+      { ...to, offset: POP_MS / total, easing: "ease-out" },
+      { ...from, offset: 1 },
+    ];
+    popAnimations = [
+      boxEl.animate(frames(rest, popped), { duration: total }),
+      badgeEl.animate(frames(badgeRest, badgePopped), { duration: total }),
+    ];
+  }
+
   // The rects above are a snapshot, but the layout can move mid-flight:
   // the embedding page grows this app's iframe as content arrives, which
   // is typically right as a widget opens, and that shifts everything
@@ -331,7 +371,7 @@ function flipWidget(
     if (settled) return;
     settled = true;
     cancelAnimationFrame(followFrame);
-    popAnimation?.cancel();
+    popAnimations.forEach((animation) => animation.cancel());
     shapeAnimation.cancel();
     positionAnimation.cancel();
     badgeAnimation.cancel();
