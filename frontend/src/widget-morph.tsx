@@ -319,7 +319,8 @@ function flipWidget(
     // The bolder border is the 1px border darkened plus a 1px ring drawn
     // as a shadow, not a wider border: a border that changes width moves
     // everything inside the box, glyph included.
-    const ink = getComputedStyle(boxEl).color;
+    // A mid grey in either colour scheme: the text colour at half strength.
+    const ink = `color-mix(in srgb, ${getComputedStyle(boxEl).color} 45%, transparent)`;
     const popped = {
       width: `${fromRect.width * POP_SCALE}px`,
       height: `${fromRect.height * POP_SCALE}px`,
