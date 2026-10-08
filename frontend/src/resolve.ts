@@ -1,3 +1,5 @@
+import { getTurnstileToken } from './turnstile.ts'
+
 // Mirrors agent_backend/api/models.py's ResolveRequest/ResolveResponse --
 // keep these in sync with that file if the backend's shape changes.
 export type ResolveRequest = {
@@ -15,6 +17,8 @@ export type ResolveResponse = {
   // Names the usage limit that refused the question, when one did;
   // `reply` then holds the explanation.
   limited?: string | null
+  // With limited === 'verification': the key for the human check.
+  site_key?: string | null
 }
 
 // Typed tool-call shape, mirrored from apps/ssr-agent/app/agent.ts -- kept
@@ -33,16 +37,39 @@ export type ResolveFn = (request: ResolveRequest) => Promise<ResolveResponse>
 // (deploy/nginx.branch.conf), Vite's dev server proxies it locally
 // (vite.config.ts), so this file never needs to know the backend's real
 // address in either environment.
-export async function resolve(request: ResolveRequest): Promise<ResolveResponse> {
-  const response = await fetch('/agent-tools-api/resolve', {
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`/agent-tools-api${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify(body),
   })
-
   if (!response.ok) {
-    throw new Error(`/resolve failed: ${response.status}`)
+    throw new Error(`${path} failed: ${response.status}`)
   }
+  return response.json() as Promise<T>
+}
 
-  return response.json() as Promise<ResolveResponse>
+export async function resolve(request: ResolveRequest): Promise<ResolveResponse> {
+  const answer = await post<ResolveResponse>('/resolve', request)
+  if (answer.limited !== 'verification' || !answer.site_key) return answer
+
+  // The backend wants to know a person is asking before it answers this
+  // session (once; see its verification.py). Run the check, hand over the
+  // result, and ask the same question again.
+  try {
+    const token = await getTurnstileToken(answer.site_key)
+    const { verified } = await post<{ verified: boolean }>('/verify', {
+      session_id: request.session_id,
+      token,
+    })
+    if (verified) return post<ResolveResponse>('/resolve', request)
+  } catch {
+    // Falls through to the message below.
+  }
+  return {
+    tool: null,
+    args: null,
+    reply: "Sorry, I couldn't verify that you're not a robot. Please try again.",
+    limited: 'verification',
+  }
 }
