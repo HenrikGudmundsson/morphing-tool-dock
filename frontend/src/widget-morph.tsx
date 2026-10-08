@@ -314,11 +314,16 @@ function flipWidget(
       marginLeft: "0px",
       marginTop: "0px",
       borderRadius: `${fromRadius}px`,
-      boxShadow: "0 0 0 0 transparent",
+      // Already a full 1px ring, only invisible: see below.
+      boxShadow: "0 0 0 1px transparent",
     };
     // The bolder border is the 1px border darkened plus a 1px ring drawn
     // as a shadow, not a wider border: a border that changes width moves
-    // everything inside the box, glyph included.
+    // everything inside the box, glyph included. The ring fades in at
+    // full width rather than growing from nothing, because a line can
+    // only be drawn in whole device pixels: a growing one would appear in
+    // one step partway through, while its colour can follow the curve
+    // smoothly, dip and overshoot included.
     // A mid grey in either colour scheme: the text colour at half strength.
     const ink = `color-mix(in srgb, ${getComputedStyle(boxEl).color} 45%, transparent)`;
     const popped = {
