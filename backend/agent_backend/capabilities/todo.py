@@ -20,8 +20,10 @@ class ShowTodoArgs(BaseModel):
 async def show_todo(ctx: RunContext[AgentDeps], args: ShowTodoArgs) -> str:
     """Show the user's to-do list, optionally adding items to it.
     Call this when the user asks to see their to-do list or tasks, or asks
-    to add, note or remember something they need to do. Put every task they
-    mention in `add`, split into separate entries.
+    to add, note or remember something they need to do. A bare task with
+    no other request around it ("buy tickets", "call mum") is them jotting
+    it down: add it. Put every task they mention in `add`, split into
+    separate entries.
     """
 
     ctx.deps.resolved = {"tool": "showTodo", "args": args.model_dump()}

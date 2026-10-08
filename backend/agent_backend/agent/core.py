@@ -21,6 +21,15 @@ async def build_agent(enabled: list[str] | None = None):
         # on a decision that is already made -- double the cost and the
         # wait for a sentence nobody reads.
         output_type=[*[c.tool_fn for c in capabilities], str],
-        # Enforced by the API, whatever the prompt asks for.
-        model_settings={"max_tokens": config.MAX_REPLY_TOKENS},
+        model_settings={
+            # Enforced by the API, whatever the prompt asks for.
+            "max_tokens": config.MAX_REPLY_TOKENS,
+            # No extended thinking. The model would otherwise reason
+            # before answering, and those tokens count against max_tokens:
+            # a question as short as "buy tickets" could spend the whole
+            # allowance thinking and have its answer cut off. Picking a
+            # widget doesn't need it, and without it answers are cheaper
+            # and faster.
+            "anthropic_thinking": {"type": "disabled"},
+        },
     )
